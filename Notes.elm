@@ -49,6 +49,8 @@ init =
 type Msg
     = InitializeTimestamps Time.Time
     | SelectNote Int
+    | InputNoteBody String
+    | UpdateNoteTimeStamp String Time.Time
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -63,6 +65,26 @@ update msg model =
 
         SelectNote id ->
             ( { model | selectedNoteId = id }, Cmd.none )
+
+        InputNoteBody newText ->
+            ( model, Time.now |> Task.perform (UpdateNoteTimeStamp newText) )
+
+        UpdateNoteTimeStamp newText newTimestamp ->
+            case getSelectedNote model of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just selectedNote ->
+                    let
+                        updateSelectedNote note =
+                            if note.id == model.selectedNoteId then
+                                { note | body = newText, timestamp = newTimestamp }
+                            else
+                                note
+                    in
+                    ( { model | notes = List.map updateSelectedNote model.notes }
+                    , Cmd.none
+                    )
 
 
 
@@ -113,15 +135,20 @@ viewNoteSelector note selectedNoteId =
 
 viewNoteEditor : Model -> Html Msg
 viewNoteEditor model =
-    case model.notes |> List.filter (\note -> note.id == model.selectedNoteId) |> List.head of
+    case getSelectedNote model of
         Nothing ->
             div [ class "note-editor" ] []
 
         Just selectedNote ->
             div [ class "note-editor" ]
                 [ p [ class "note-editor-info" ] [ selectedNote.timestamp |> formatTimestamp |> text ]
-                , textarea [ class "note-editor-input" ] [ selectedNote.body |> formatTitle |> text ]
+                , textarea [ class "note-editor-input", onInput InputNoteBody, value selectedNote.body ] []
                 ]
+
+
+getSelectedNote : Model -> Maybe Note
+getSelectedNote model =
+    model.notes |> List.filter (\note -> note.id == model.selectedNoteId) |> List.head
 
 
 formatTimestamp : Float -> String
