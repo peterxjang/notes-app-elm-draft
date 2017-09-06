@@ -47,6 +47,7 @@ init =
 
 type Msg
     = InitializeTimestamps Time.Time
+    | SelectNote
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -58,6 +59,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        SelectNote ->
+            ( model, Cmd.none )
 
 
 
@@ -94,12 +98,33 @@ view model =
 viewNoteSelectors : Model -> Html Msg
 viewNoteSelectors model =
     div [ class "note-selectors" ]
-        (model.notes |> List.map (\note -> viewNoteSelector note model.selectedNoteId))
+        (model.notes
+            |> List.sortBy .timestamp
+            |> List.reverse
+            |> List.map (\note -> viewNoteSelector note model.selectedNoteId)
+        )
 
 
 viewNoteSelector : Note -> Int -> Html Msg
 viewNoteSelector note selectedNoteId =
-    div [ classList [ ( "note-selector", True ), ( "active", note.id == selectedNoteId ) ] ]
-        [ p [ class "note-selector-title" ] [ text note.body ]
+    div [ classList [ ( "note-selector", True ), ( "active", note.id == selectedNoteId ) ], onClick SelectNote ]
+        [ p [ class "note-selector-title" ] [ note.body |> formatTitle |> text ]
         , p [ class "note-selector-timestamp" ] [ note.timestamp |> Date.fromTime |> toString |> text ]
         ]
+
+
+formatTitle : String -> String
+formatTitle body =
+    let
+        maxLength =
+            20
+
+        length =
+            String.length body
+    in
+    if length > maxLength then
+        String.left (maxLength - 3) body ++ "..."
+    else if length == 0 then
+        "New note"
+    else
+        body
