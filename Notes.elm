@@ -3,6 +3,7 @@ module Main exposing (..)
 import Date
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Task
 import Time
 
@@ -47,7 +48,7 @@ init =
 
 type Msg
     = InitializeTimestamps Time.Time
-    | SelectNote
+    | SelectNote Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -60,8 +61,8 @@ update msg model =
             , Cmd.none
             )
 
-        SelectNote ->
-            ( model, Cmd.none )
+        SelectNote id ->
+            ( { model | selectedNoteId = id }, Cmd.none )
 
 
 
@@ -87,10 +88,7 @@ view model =
             ]
         , div [ class "note-container" ]
             [ viewNoteSelectors model
-            , div [ class "note-editor" ]
-                [ p [ class "note-editor-info" ] [ text "Timestamp here..." ]
-                , textarea [ class "note-editor-input" ] [ text "First note..." ]
-                ]
+            , viewNoteEditor model
             ]
         ]
 
@@ -107,10 +105,28 @@ viewNoteSelectors model =
 
 viewNoteSelector : Note -> Int -> Html Msg
 viewNoteSelector note selectedNoteId =
-    div [ classList [ ( "note-selector", True ), ( "active", note.id == selectedNoteId ) ], onClick SelectNote ]
+    div [ classList [ ( "note-selector", True ), ( "active", note.id == selectedNoteId ) ], onClick (SelectNote note.id) ]
         [ p [ class "note-selector-title" ] [ note.body |> formatTitle |> text ]
-        , p [ class "note-selector-timestamp" ] [ note.timestamp |> Date.fromTime |> toString |> text ]
+        , p [ class "note-selector-timestamp" ] [ note.timestamp |> formatTimestamp |> text ]
         ]
+
+
+viewNoteEditor : Model -> Html Msg
+viewNoteEditor model =
+    case model.notes |> List.filter (\note -> note.id == model.selectedNoteId) |> List.head of
+        Nothing ->
+            div [ class "note-editor" ] []
+
+        Just selectedNote ->
+            div [ class "note-editor" ]
+                [ p [ class "note-editor-info" ] [ selectedNote.timestamp |> formatTimestamp |> text ]
+                , textarea [ class "note-editor-input" ] [ selectedNote.body |> formatTitle |> text ]
+                ]
+
+
+formatTimestamp : Float -> String
+formatTimestamp timestamp =
+    timestamp |> Date.fromTime |> toString
 
 
 formatTitle : String -> String
